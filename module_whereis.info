@@ -1,0 +1,4 @@
+name = Module Whereis
+description = Provides the system location of each module on the module admin page for easier development.
+core = 6.x
+version = 6.x-1.0

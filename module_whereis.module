@@ -1,0 +1,72 @@
+<?php
+
+/**
+ * Implements hook_form_alter().
+ */
+function module_whereis_form_alter(&$form, &$form_state, $form_id) {
+  switch ($form_id) {
+    // The admin modules page.
+    case 'system_modules':
+//print '<pre>'; print_r($form); die('</pre>');
+      $locations = fetch_module_locations();
+      $form['locations'] = array('#tree' => TRUE);
+      foreach ($locations as $name => $location) {
+        // We add "w_" to the name so as not to upset system module.
+        $form['description'][$name]['locations'][$name] = array(
+          '#type'   => 'item',
+          '#value'  => $location,
+          '#title'  => t('Location'),
+          '#prefix' => '<div class="container-inline">',
+          '#suffix' => '</div>',
+        );
+      }
+      
+      break;
+  }
+}
+
+/**
+ * Helper function to fetch and cache module weights.
+ */
+function fetch_module_locations($name = NULL) {
+  static $module_locations = array();
+  if (empty($module_locations)) {
+    $query = "SELECT filename, name, type, owner, status, throttle, bootstrap, schema_version, weight FROM {system} WHERE type = 'module' ORDER BY name";
+    $result = db_query($query);
+    while ($row = db_fetch_object($result)) {
+      // When a module is deleted, it remains in the system table.
+      // If module has been deleted, omit it from the list.
+      if (file_exists($row->filename)) {
+        $location = str_replace("/$row->name.module", '', $row->filename);
+        $locs = explode('/', $location);
+        // Core modules are located in modules/[name] folder, we don't need to highlight those!
+        if (count($locs) > 2) {
+          $locs[1] = "<strong>$locs[1]</strong>";
+        }
+        
+        $module_locations[$row->name] = implode('/', $locs);
+        
+      }
+      else {
+        // Do we want a warning?
+        if (variable_get('module_locations_warning', 0)) {
+          if ($row->status) {
+            drupal_set_message(t('@name module file (@file) could not be found, but is still marked as "enabled!"', array('@name' => $row->name, '@file' => $row->filename)), 'warning');
+          }
+          else {
+            drupal_set_message(t('@name module file (@file) could not be found.', array('@name' => $row->name, '@file' => $row->filename)));
+          }
+        }
+      }
+    }
+  }
+  if ($name === NULL) {
+    return $module_locations;
+  }
+  elseif (isset($module_locations[$name])) {
+    return $module_locations[$name];
+  }
+  else {
+    return NULL;
+  }
+}
