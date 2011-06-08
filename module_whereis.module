@@ -7,18 +7,20 @@ function module_whereis_form_alter(&$form, &$form_state, $form_id) {
   switch ($form_id) {
     // The admin modules page.
     case 'system_modules':
-//print '<pre>'; print_r($form); die('</pre>');
-      $locations = fetch_module_locations();
-      $form['locations'] = array('#tree' => TRUE);
-      foreach ($locations as $name => $location) {
-        // We add "w_" to the name so as not to upset system module.
-        $form['description'][$name]['locations'][$name] = array(
-          '#type'   => 'item',
-          '#value'  => $location,
-          '#title'  => t('Location'),
-          '#prefix' => '<div class="container-inline">',
-          '#suffix' => '</div>',
-        );
+      // Check for this so that this info is not displayed on the "Some required modules must be enabled" confirmation page
+      if (!empty($form['description']['module_whereis'])) {
+        $locations = fetch_module_locations();
+        $form['locations'] = array('#tree' => TRUE);
+        foreach ($locations as $name => $location) {
+          // We add "w_" to the name so as not to upset system module.
+          $form['description'][$name]['locations'][$name] = array(
+            '#type'   => 'item',
+            '#value'  => $location,
+            '#title'  => t('Location'),
+            '#prefix' => '<div class="container-inline">',
+            '#suffix' => '</div>',
+          );
+        }
       }
       
       break;
@@ -44,7 +46,11 @@ function fetch_module_locations($name = NULL) {
           $locs[1] = "<strong>$locs[1]</strong>";
         }
         
-        $module_locations[$row->name] = implode('/', $locs);
+        // Tests are hidden...we don't need to show their location(s)
+        if (!in_array('tests', $locs)) {
+          $module_locations[$row->name] = implode('/', $locs);
+        }
+        
         
       }
       else {
