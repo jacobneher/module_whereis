@@ -4,26 +4,16 @@
  * Implements hook_form_alter().
  */
 function module_whereis_form_alter(&$form, &$form_state, $form_id) {
-  switch ($form_id) {
-    // The admin modules page.
-    case 'system_modules':
-      // Check for this so that this info is not displayed on the "Some required modules must be enabled" confirmation page
-      if (!empty($form['description']['module_whereis'])) {
-        $locations = fetch_module_locations();
-        $form['locations'] = array('#tree' => TRUE);
-        foreach ($locations as $name => $location) {
-          // We add "w_" to the name so as not to upset system module.
-          $form['description'][$name]['locations'][$name] = array(
-            '#type'   => 'item',
-            '#value'  => $location,
-            '#title'  => t('Location'),
-            '#prefix' => '<div class="container-inline">',
-            '#suffix' => '</div>',
-          );
-        }
+  // Check for this so that this info is not displayed on the "Some required modules must be enabled" confirmation page
+  if ('system_modules' == $form_id) {
+    $locations = fetch_module_locations();
+//    $form['locations'] = array('#tree' => TRUE);
+    foreach ($locations as $name => $location) {
+      if (isset($form['modules'][$name])) {
+        $desc = $form['modules'][$name]['description']['#markup'];
+        $form['modules'][$name]['description']['#markup'] = $desc . '<div style="font-size: 10px;"> ' . t('Location: ') . $location . '</div>';
       }
-      
-      break;
+    }
   }
 }
 
@@ -33,12 +23,12 @@ function module_whereis_form_alter(&$form, &$form_state, $form_id) {
 function fetch_module_locations($name = NULL) {
   static $module_locations = array();
   if (empty($module_locations)) {
-    $query = "SELECT filename, name, type, owner, status, throttle, bootstrap, schema_version, weight FROM {system} WHERE type = 'module' ORDER BY name";
-    $result = db_query($query);
-    while ($row = db_fetch_object($result)) {
+    return  db_query("SELECT name, filename FROM {system} WHERE type = 'module' ORDER BY name")->fetchAllKeyed();
+print '<pre>RESULT'; print_r($result); die('</pre>');
+    while ($row = $result->fetchObject()) {
       // When a module is deleted, it remains in the system table.
       // If module has been deleted, omit it from the list.
-      if (file_exists($row->filename)) {
+      if (module_exists($row->name)) {
         $location = str_replace("/$row->name.module", '', $row->filename);
         $locs = explode('/', $location);
         // Core modules are located in modules/[name] folder, we don't need to highlight those!
