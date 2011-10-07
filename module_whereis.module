@@ -6,63 +6,12 @@
 function module_whereis_form_alter(&$form, &$form_state, $form_id) {
   // Check for this so that this info is not displayed on the "Some required modules must be enabled" confirmation page
   if ('system_modules' == $form_id) {
-    $locations = fetch_module_locations();
-//    $form['locations'] = array('#tree' => TRUE);
+    $locations = db_query("SELECT name, filename FROM {system} WHERE type = 'module' ORDER BY name")->fetchAllKeyed();
     foreach ($locations as $name => $location) {
       if (isset($form['modules'][$name])) {
         $desc = $form['modules'][$name]['description']['#markup'];
         $form['modules'][$name]['description']['#markup'] = $desc . '<div style="font-size: 10px;"> ' . t('Location: ') . $location . '</div>';
       }
     }
-  }
-}
-
-/**
- * Helper function to fetch and cache module weights.
- */
-function fetch_module_locations($name = NULL) {
-  static $module_locations = array();
-  if (empty($module_locations)) {
-    return  db_query("SELECT name, filename FROM {system} WHERE type = 'module' ORDER BY name")->fetchAllKeyed();
-print '<pre>RESULT'; print_r($result); die('</pre>');
-    while ($row = $result->fetchObject()) {
-      // When a module is deleted, it remains in the system table.
-      // If module has been deleted, omit it from the list.
-      if (module_exists($row->name)) {
-        $location = str_replace("/$row->name.module", '', $row->filename);
-        $locs = explode('/', $location);
-        // Core modules are located in modules/[name] folder, we don't need to highlight those!
-        if (count($locs) > 2) {
-          $locs[1] = "<strong>$locs[1]</strong>";
-        }
-        
-        // Tests are hidden...we don't need to show their location(s)
-        if (!in_array('tests', $locs)) {
-          $module_locations[$row->name] = implode('/', $locs);
-        }
-        
-        
-      }
-      else {
-        // Do we want a warning?
-        if (variable_get('module_locations_warning', 0)) {
-          if ($row->status) {
-            drupal_set_message(t('@name module file (@file) could not be found, but is still marked as "enabled!"', array('@name' => $row->name, '@file' => $row->filename)), 'warning');
-          }
-          else {
-            drupal_set_message(t('@name module file (@file) could not be found.', array('@name' => $row->name, '@file' => $row->filename)));
-          }
-        }
-      }
-    }
-  }
-  if ($name === NULL) {
-    return $module_locations;
-  }
-  elseif (isset($module_locations[$name])) {
-    return $module_locations[$name];
-  }
-  else {
-    return NULL;
   }
 }
