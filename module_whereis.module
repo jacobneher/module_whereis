@@ -8,6 +8,10 @@ function module_whereis_form_alter(&$form, &$form_state, $form_id) {
   if ('system_modules' == $form_id) {
     $locations = db_query("SELECT name, filename FROM {system} WHERE type = 'module' ORDER BY name")->fetchAllKeyed();
     foreach ($locations as $name => $location) {
+      $location_parts = explode('/', $location);
+      $trash = array_pop($location_parts);
+      $location = implode('/', $location_parts);
+      
       if (isset($form['modules'][$name])) {
         $desc = $form['modules'][$name]['description']['#markup'];
         $form['modules'][$name]['description']['#markup'] = $desc . '<div style="font-size: 10px;"> ' . t('Location: ') . $location . '</div>';
